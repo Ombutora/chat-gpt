@@ -7,13 +7,17 @@ import subprocess
 import sys
 from pathlib import Path
 
+THEME = Path(__file__).with_name("theme.toml")
+AVATARS = {"user": "🙂", "assistant": "🐯"}
+
 
 def launch() -> None:
-    # Entry point for the `tora-web` command: start Streamlit on this file.
+    # Entry point for the `tora-web` command: start Streamlit on this file with the Tora theme.
     # Only this computer can reach it by default, since the page spends your API key.
     # Pass --server.address=0.0.0.0 to share it on your network.
     args = [sys.executable, "-m", "streamlit", "run", str(Path(__file__).resolve()),
-            "--server.address=localhost", "--server.headless=false", *sys.argv[1:]]
+            "--server.address=localhost", "--server.headless=false", "--client.toolbarMode=viewer",
+            f"--theme.base={THEME}", *sys.argv[1:]]
     sys.exit(subprocess.call(args))
 
 
@@ -25,7 +29,7 @@ def app() -> None:
     from tora_ai.chat import Chat
     from tora_ai.config import REASONING_EFFORTS, ConfigError, Settings
 
-    st.set_page_config(page_title="Tora AI", page_icon="💬", layout="centered")
+    st.set_page_config(page_title="Tora AI", page_icon="🐯", layout="centered")
 
     if "chat" not in st.session_state:
         try:
@@ -37,7 +41,7 @@ def app() -> None:
     chat: Chat = st.session_state.chat
 
     with st.sidebar:
-        st.title("Tora AI")
+        st.title("🐯 Tora AI")
         st.caption(f"v{__version__} · {chat.settings.provider}")
         chat.settings.model = st.text_input("Model", chat.settings.model)
         chat.settings.reasoning_effort = st.radio(
@@ -61,9 +65,10 @@ def app() -> None:
                 st.text(t["result"][:3000])
 
     if not st.session_state.history:
-        st.markdown("### Hi, I'm Tora AI 👋\nAsk me anything.")
+        st.markdown("## :primary[Tora AI] 🐯\nHi, I'm Tora. Ask me anything, or turn on tools in the sidebar "
+                    "to let me read web pages and run code.")
     for entry in st.session_state.history:
-        with st.chat_message(entry["role"]):
+        with st.chat_message(entry["role"], avatar=AVATARS[entry["role"]]):
             if show_reasoning and entry.get("reasoning"):
                 with st.expander("Reasoning"):
                     st.markdown(entry["reasoning"])
@@ -74,10 +79,10 @@ def app() -> None:
     if not prompt:
         return
     st.session_state.history.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
+    with st.chat_message("user", avatar=AVATARS["user"]):
         st.markdown(prompt)
 
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant", avatar=AVATARS["assistant"]):
         reasoning_box = st.expander("Reasoning", expanded=False) if show_reasoning else None
         reasoning_area = reasoning_box.empty() if reasoning_box else None
         tools_area = st.container()
