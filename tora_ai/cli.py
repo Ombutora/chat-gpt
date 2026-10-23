@@ -39,7 +39,7 @@ def _render(segments: list[list[str]], show_reasoning: bool) -> Group:
         if kind == "reasoning" and show_reasoning:
             parts.append(Text("thinking: " + content.strip(), style="dim italic"))
         elif kind == "tool_call":
-            parts.append(Text(f"⚙ {content}", style="cyan"))
+            parts.append(Text(f"⚙ {content}", style="#ffb454"))
         elif kind == "tool_result":
             parts.append(Text(f"  ↳ {_short(content)}", style="dim"))
         elif kind == "notice":
@@ -127,11 +127,11 @@ def main(argv: list[str] | None = None) -> int:
     chat = Chat(settings)
     state = {"show_reasoning": args.think}
 
-    console.print(f"[bold magenta]Tora AI[/] {__version__} · {settings.model} via {settings.provider} · "
+    console.print(f"[bold #f7931e]🐯 Tora AI[/] {__version__} · {settings.model} via {settings.provider} · "
                   f"tools: {', '.join(chat.tools) or 'none'}\n[dim]Type /help for commands.[/]")
     while True:
         try:
-            line = console.input("\n[bold green]You ›[/] ").strip()
+            line = console.input("\n[bold #e8dccb]You ›[/] ").strip()
         except (EOFError, KeyboardInterrupt):
             console.print(); return 0
         if not line:
@@ -140,7 +140,7 @@ def main(argv: list[str] | None = None) -> int:
             if not handle_command(line, chat, console, state):
                 return 0
             continue
-        console.print("[bold magenta]Tora ›[/]")
+        console.print("[bold #f7931e]Tora ›[/]")
         try:
             reply(chat, line, console, state["show_reasoning"])
         except KeyboardInterrupt:
