@@ -1,0 +1,19 @@
+Tora AI
+Copyright 2026 Ombutora
+
+This project is based on gpt-oss by OpenAI (https://github.com/openai/gpt-oss),
+licensed under the Apache License, Version 2.0 (see LICENSE).
+Copyright (c) OpenAI.
+
+Tora AI started as a copy of gpt-oss at upstream commit 7b58334 (July 2026) and
+has been substantially modified: the reference inference implementations,
+harmony-based tools, API server, evals and examples were removed, and a new
+chat engine, terminal app and web UI were written. The following files are
+adapted from gpt-oss and were changed:
+
+- tora_ai/tools/page_text.py    from gpt_oss/tools/simple_browser/page_contents.py
+- tora_ai/tools/web.py          search API usage from gpt_oss/tools/simple_browser/backend.py
+- tora_ai/tools/python_exec.py  from gpt_oss/tools/python_docker/docker_tool.py
+
+Use of the gpt-oss models is subject to OpenAI's usage policy (see USAGE_POLICY).
+Tora AI is an independent project and is not affiliated with or endorsed by OpenAI.
