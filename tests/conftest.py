@@ -1,118 +1,63 @@
-import os
-import sys
+"""A tiny fake OpenAI-compatible server, so the chat engine can be tested without an API key."""
+
+from __future__ import annotations
+
+import json
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
 import pytest
-from typing import Generator, Any
-from unittest.mock import Mock, MagicMock
-from fastapi.testclient import TestClient
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from openai_harmony import (
-    HarmonyEncodingName,
-    load_harmony_encoding,
-)
-from gpt_oss.responses_api.api_server import create_api_server
 
 
-@pytest.fixture(scope="session")
-def harmony_encoding():
-    return load_harmony_encoding(HarmonyEncodingName.HARMONY_GPT_OSS)
+class FakeServer:
+    def __init__(self):
+        self.responses: list = []  # each: list of delta dicts to stream, or an int HTTP error status
+        self.requests: list[dict] = []
+        handler = self._make_handler()
+        self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+        self.url = f"http://127.0.0.1:{self.httpd.server_port}/v1"
+        threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
 
+    def _make_handler(self):
+        server = self
 
-@pytest.fixture
-def mock_infer_token(harmony_encoding):
-    fake_tokens = harmony_encoding.encode(
-        "<|channel|>final<|message|>Test response<|return|>", 
-        allowed_special="all"
-    )
-    token_queue = fake_tokens.copy()
-    
-    def _mock_infer(tokens: list[int], temperature: float = 0.0, new_request: bool = False) -> int:
-        nonlocal token_queue
-        if len(token_queue) == 0:
-            token_queue = fake_tokens.copy()
-        return token_queue.pop(0)
-    return _mock_infer
+        class Handler(BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
 
+            def do_POST(self):
+                body = json.loads(self.rfile.read(int(self.headers["content-length"])))
+                server.requests.append(body)
+                response = server.responses.pop(0)
+                if isinstance(response, int):
+                    self.send_response(response)
+                    self.send_header("content-type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": {"message": "boom"}}).encode())
+                    return
+                self.send_response(200)
+                self.send_header("content-type", "text/event-stream")
+                self.end_headers()
+                for delta in response:
+                    chunk = {"id": "c1", "object": "chat.completion.chunk", "created": 0, "model": body["model"],
+                             "choices": [{"index": 0, "delta": delta, "finish_reason": None}]}
+                    self.wfile.write(f"data: {json.dumps(chunk)}\n\n".encode())
+                self.wfile.write(b"data: [DONE]\n\n")
 
-@pytest.fixture
-def api_client(harmony_encoding, mock_infer_token) -> Generator[TestClient, None, None]:
-    app = create_api_server(
-        infer_next_token=mock_infer_token,
-        encoding=harmony_encoding
-    )
-    with TestClient(app) as client:
-        yield client
+        return Handler
 
 
 @pytest.fixture
-def sample_request_data():
-    return {
-        "model": "gpt-oss-120b",
-        "input": "Hello, how can I help you today?",
-        "stream": False,
-        "reasoning_effort": "low",
-        "temperature": 0.7,
-        "tools": []
-    }
-
-
-@pytest.fixture
-def mock_browser_tool():
-    mock = MagicMock()
-    mock.search.return_value = ["Result 1", "Result 2"]
-    mock.open_page.return_value = "Page content"
-    mock.find_on_page.return_value = "Found text"
-    return mock
-
-
-@pytest.fixture
-def mock_python_tool():
-    mock = MagicMock()
-    mock.execute.return_value = {
-        "output": "print('Hello')",
-        "error": None,
-        "exit_code": 0
-    }
-    return mock
+def fake_server():
+    server = FakeServer()
+    yield server
+    server.httpd.shutdown()
 
 
 @pytest.fixture(autouse=True)
-def reset_test_environment():
-    test_env_vars = ['OPENAI_API_KEY', 'GPT_OSS_MODEL_PATH']
-    original_values = {}
-    
-    for var in test_env_vars:
-        if var in os.environ:
-            original_values[var] = os.environ[var]
-            del os.environ[var]
-    
-    yield
-    
-    for var, value in original_values.items():
-        os.environ[var] = value
-
-
-@pytest.fixture
-def performance_timer():
-    import time
-    
-    class Timer:
-        def __init__(self):
-            self.start_time = None
-            self.end_time = None
-        
-        def start(self):
-            self.start_time = time.time()
-        
-        def stop(self):
-            self.end_time = time.time()
-            return self.elapsed
-        
-        @property
-        def elapsed(self):
-            if self.start_time and self.end_time:
-                return self.end_time - self.start_time
-            return None
-    
-    return Timer()
+def clean_env(monkeypatch):
+    # Keep the developer's real keys and .env settings out of the tests.
+    for var in ("TORA_PROVIDER", "TORA_BASE_URL", "TORA_API_KEY", "TORA_MODEL", "TORA_REASONING_EFFORT", "TORA_TEMPERATURE",
+                "TORA_TOOLS", "TORA_PYTHON_BACKEND", "TORA_SYSTEM_PROMPT", "OPENROUTER_API_KEY", "GROQ_API_KEY", "HF_TOKEN",
+                "EXA_API_KEY", "YDC_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
