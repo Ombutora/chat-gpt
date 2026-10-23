@@ -23,6 +23,7 @@ The latest release adds …
   - `web_search`: searches the web through Exa or You.com (needs that service's API key)
   - `run_python`: runs Python in a throwaway, offline Docker container, or locally with `uv`
 - **Your own persona:** replace Tora's default personality with your own system prompt.
+- **Tiger theme:** "tora" is Japanese for tiger, so the web UI is warm charcoal with a tiger-orange accent, and it has a matching light mode.
 
 ## Quick start
 
@@ -97,6 +98,9 @@ Options: `tora --think --effort high --model openai/gpt-oss-120b --env path/to/.
 
 The web UI has the same controls in its sidebar. It listens only on your own computer by default because it spends your API key. Run `tora-web --server.address=0.0.0.0` to share it on your network.
 
+### Changing the look
+The web theme lives in [`tora_ai/theme.toml`](tora_ai/theme.toml). It has dark and light variants with their own colours, plus fonts (Inter, Space Grotesk, JetBrains Mono, loaded from Google Fonts with system fonts as the fallback) and corner rounding. The page follows your system's light or dark setting, and you can switch it in the ⋮ menu under **Settings**. Edit the colours and restart `tora-web` to restyle it. The terminal colours are set in `tora_ai/cli.py`.
+
 ## Project layout
 
 ```
@@ -106,6 +110,7 @@ tora_ai/
 ├── chat.py          conversation engine: streaming + tool-call loop
 ├── cli.py           terminal app (tora)
 ├── web_app.py       Streamlit web app (tora-web)
+├── theme.toml       web UI colours and fonts
 └── tools/
     ├── __init__.py      tool registry and safe tool calling
     ├── web.py           web_search and fetch_page
