@@ -17,11 +17,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+web = ["streamlit>=1.50"]
 python = ["docker>=7.1.0"]
 test = ["pytest>=8.0"]
 
 [project.scripts]
 tora = "tora_ai.cli:main"
+tora-web = "tora_ai.web_app:launch"
 
 [build-system]
 requires = ["setuptools>=77"]
